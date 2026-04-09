@@ -5,7 +5,7 @@ import { evolutionChain } from "./evolution";
 const baseURL: string = "https://pokeapi.co/api/v2";
 
 type pokemonMoves = {
-  accuracy: number;
+  accuracy: number | null;
   category: string;
   effect: string;
   level: number;
@@ -13,7 +13,7 @@ type pokemonMoves = {
     name: string;
     url: string;
   };
-  power: number;
+  power: number | null;
   type: string;
 };
 
@@ -24,7 +24,7 @@ export type pokemonType = {
       url: string;
     };
     is_hidden: boolean;
-    description: string;
+    description?: string;
   }[];
   height: number;
   id: number;
@@ -82,54 +82,54 @@ export type pokemonType = {
 export const getPokemon = async (name: string) => {
   const res = await fetch(`${baseURL}/pokemon/${name.toLowerCase()}`);
   if (!res.ok) throw new Error("Pokemon Not Found");
-  const data: pokemonType = await res.json();
+  const data = await res.json();
 
   const abilities = await Promise.all(
-    data.abilities.map(async (ab) => {
+    data.abilities.map(async (ab: pokemonType["abilities"][number]) => {
       const desc = await getAbilityDesc(ab.ability.url);
-      return { ...ab, description: desc };
+      return { ...ab, description: desc ?? "No description Available" };
     }),
   );
 
   const filterMove = data.moves
-    .filter((move) =>
+    .filter((move: pokemonType["moves"][number]) =>
       move.version_group_details.some(
         (v) =>
           v.version_group.name === "scarlet-violet" &&
           v.move_learn_method.name === "level-up",
       ),
     )
-    .map((moves) => ({
+    .map((moves:any) => ({
       ...moves,
       version_group_details: moves.version_group_details.filter(
-        (v) =>
+        (v:any) =>
           v.version_group.name === "scarlet-violet" &&
           v.move_learn_method.name === "level-up",
       ),
     }));
 
-  const filterNonLevelMoves = data.moves.filter((move) =>
+  const filterNonLevelMoves = data.moves.filter((move:any) =>
     move.version_group_details.some(
-      (v) =>
+      (v:any) =>
         v.version_group.name === "scarlet-violet" &&
         v.move_learn_method.name != "level-up",
     ),
   );
 
   filterNonLevelMoves.sort(
-    (a, b) =>
+    (a: any, b: any) =>
       a.version_group_details[0].level_learned_at -
       b.version_group_details[0].level_learned_at,
   );
 
   filterMove.sort(
-    (a, b) =>
+    (a: any, b: any) =>
       a.version_group_details[0].level_learned_at -
       b.version_group_details[0].level_learned_at,
   );
 
   const levelUpMoves = await Promise.all(
-    filterMove.map(async (mv) => {
+    filterMove.map(async (mv:any) => {
       const desc = await moveDesc(mv.move.url);
       return {
         ...mv,
@@ -140,7 +140,7 @@ export const getPokemon = async (name: string) => {
   );
 
   const nonLevelUpMoves = await Promise.all(
-    filterNonLevelMoves.map(async (mv) => {
+    filterNonLevelMoves.map(async (mv:any) => {
       const desc = await moveDesc(mv.move.url);
       return {
         ...mv,
@@ -158,5 +158,5 @@ export const getPokemon = async (name: string) => {
     levelUpMoves,
     nonLevelUpMoves,
     pokemonEvolution,
-  };
+  } as pokemonType;
 };
